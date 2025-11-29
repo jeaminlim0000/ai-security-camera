@@ -1,0 +1,9 @@
+torch>=1.8.0
+torchvision>=0.9.0
+opencv-python>=4.1.0
+numpy>=1.23.0
+pandas>=1.3.0
+pillow>=10.3.0
+yolov5
+matplotlib
+seaborn
