@@ -1,363 +1,128 @@
-# AI 방범 카메라 시스템
+# AI 방범 카메라 — 영상 감지와 웹 연동
 
-YOLOv5 기반 실시간 객체 감지 및 총기 탐지 기능을 갖춘 웹 기반 방범 카메라 시스템
+YOLOv5로 웹캠 영상의 객체를 검출하고, 녹화한 영상을 편집해 웹 게시판에서 확인할 수 있도록 만든 개인 프로젝트입니다. Python 영상 처리와 Java 웹 사이의 실행·파일 전달 흐름을 연결했습니다.
 
-## 프로젝트 소개
+| 항목 | 내용 |
+| --- | --- |
+| 기간 | 2024 ~ 2025년 · 약 7개월 |
+| 형태 | 개인 프로젝트 |
+| 담당 | 데이터 수집·라벨링, 총기 감지 모델 학습, 감지·녹화·편집 기능, Java 웹 연동 |
+| 주요 기술 | Python, YOLOv5, OpenCV, Java, JSP/Servlet, JDBC, MySQL, FFmpeg |
 
-공공장소에서 발생하는 범죄 상황을 조금이라도 빠르게 인지하고 대처하기 위해 개발한 AI 기반 방범 시스템입니다.
-웹 인터페이스를 통해 방범 카메라를 제어하고, YOLOv5 모델을 활용하여 실시간으로 움직이는 객체와 총기를 감지합니다.
+## 개발 배경
 
-### 개발 배경
+자주 이용하던 역에서 발생한 칼부림 사건을 계기로, 위험 상황을 더 빨리 확인할 수 있는 방법을 고민했습니다. 영상 속 대상을 감지하는 기능에서 시작해, 감지 영상을 저장하고 필요한 구간을 편집한 뒤 웹에서 확인하는 흐름까지 구현했습니다.
 
-자주 이용하던 역에서 발생한 칼부림 사건을 계기로, 범죄 상황을 막지는 못해도 조금이라도 더 빨리 인지하고 대처할 수 있도록 돕고자 하는 마음에서 개발하게 되었습니다.
+일반 객체 검출에는 사전 학습된 YOLOv5s를 사용하고, 별도로 수집·라벨링한 이미지로 `pistol` 클래스를 학습했습니다. 현재 구현의 위험 물체 감지 대상은 총기입니다.
 
-### 주요 기능
+## 주요 기능
 
-#### 1. 실시간 객체 감지
-- 움직이는 물체 자동 인식 및 추적
-- 감지 대상: 사람, 동물(dog, cat, bird, cow, horse, sheep, elephant, bear, zebra, giraffe), 물병(bottle)
-- 총 12개 클래스 선택적 감지 (YOLOv5 COCO 80개 클래스 중)
-- 실시간 바운딩 박스 표시
+| 기능 | 동작 |
+| --- | --- |
+| 객체 검출 | 웹캠 프레임에서 사람·동물·물병 등 선택한 12개 클래스와 총기를 검출 |
+| 결과 표시 | 감지한 대상의 위치와 이름을 바운딩 박스로 표시 |
+| 자동 녹화 | 대상이 감지되면 녹화하고, 마지막 검출 이후 3초가 지나면 종료 |
+| 웹 알림 | 총기 감지 상태를 파일에 기록하고 브라우저에서 5초 간격으로 조회 |
+| 영상 편집 | 날짜·파일 선택, 프레임 이동, 구간 지정, ROI 선택, 스냅샷·영상 저장 |
+| 게시판 | 이미지·영상 첨부, 게시글 작성·조회·수정·삭제 |
 
-#### 2. 총기 감지 (커스텀 모델)
-- GitHub 수집 데이터 + 라벨미(Labelme) 도구로 직접 라벨링
-- YOLOv5 기반 총기 탐지 모델 학습
-- 총기 감지 시 웹 페이지 실시간 알림
-- 감지 상태 자동 로그 기록
+객체 위치는 프레임마다 새로 검출합니다. 객체 ID를 유지하는 추적 기능이나 프레임 간 움직임 분석은 구현 범위에 포함하지 않았습니다.
 
-#### 3. 자동 녹화 시스템
-- 객체 감지 시 자동 녹화 시작
-- 날짜별 폴더 자동 생성 및 정리
-- 움직임 종료 3초 후 자동 녹화 중지
-- MP4 형식 저장
+## 처리 흐름
 
-#### 4. 영상 편집 기능 (PotoCapcher)
-- 녹화된 영상 날짜별 검색
-- 프레임 단위 이동 (1프레임/10프레임)
-- 특정 구간 선택 및 저장
-- ROI(관심 영역) 지정 기능
-- 스냅샷 저장
-- 확대/축소 뷰 제공
-
-#### 5. 게시판 시스템
-- 공지사항 및 게시글 작성
-- 이미지/동영상 파일 첨부
-- 게시글 수정/삭제
-- 사용자 인증 시스템
-
-## 기술 스택
-
-### Backend
-- Java 6 (JDK 6)
-- Spring Framework 3.1.1.RELEASE
-- Servlet API 3.0.1
-- JSP 2.2
-- JSTL 1.2
-- MyBatis 3.2.8
-- Apache Tomcat 9.0.98
-
-### AI / Computer Vision
-- Python 3.10.11
-- PyTorch 2.6.0+cpu
-- Ultralytics YOLOv5
-- OpenCV 4.11.0.86
-- NumPy 1.26.4
-- Pillow 11.1.0
-
-### Database
-- MySQL 5.x (게시판 시스템용)
-
-### Development Tools
-- Maven
-- IntelliJ IDEA
-- Labelme (데이터 라벨링)
-
-### Libraries
-- SLF4J 1.6.6
-- Log4j 1.2.15
-- JUnit 4.7
-
-## 시스템 요구사항
-
-- OS: Windows 10/11, macOS, Linux
-- JDK: Java 6 이상
-- Python: 3.10 이상 권장
-- MySQL: 5.x 이상
-- Apache Tomcat: 9.0 이상
-- 웹캠 (카메라 기능 사용 시)
-- CPU: 다중 코어 권장 (AI 모델 추론용)
-
-## 설치 및 실행
-
-### 1. Python 환경 설정
-
-#### 필수 라이브러리 설치
-```bash
-pip install torch==2.6.0
-pip install opencv-python==4.11.0.86
-pip install yolov5
-pip install numpy==1.26.4
-pip install pillow==11.1.0
-pip install pandas
+```mermaid
+flowchart TD
+    B[브라우저 · JSP가 렌더링한 화면] -->|카메라 실행 요청| S[Java Servlet]
+    S -->|ProcessBuilder| P[Python · YOLOv5 / OpenCV]
+    C[서버 PC에 연결된 웹캠] -->|프레임| P
+    P -->|검출 시 자동 녹화| V[날짜별 MP4 파일]
+    P -->|현재 총기 감지 상태| F[pistol_flag.txt]
+    B -->|5초 간격 조회| F
+    V -->|사용자가 파일·구간·ROI 선택| E[PotoCapcher · 영상 편집]
+    E -->|편집 결과 저장| O[영상 / 스냅샷]
+    O -->|사용자가 게시글에 첨부| W[BoardWriteServlet · FFmpeg 변환]
+    W --> D[(MySQL · 게시글 / 첨부 경로)]
+    W --> U[업로드 파일 저장]
 ```
 
-또는 requirements.txt 사용:
-```bash
-cd python
-pip install -r requirements.txt
+카메라와 OpenCV 창은 Tomcat에서 실행한 Python 프로세스가 동작하는 PC에서 열립니다. 브라우저에서 요청을 보내면 서버 PC의 웹캠을 사용하며, 영상 편집과 게시글 업로드는 사용자가 직접 진행합니다.
+
+## 구현 과정
+
+### 두 모델의 검출 결과를 녹화 조건으로 연결
+
+일반 객체용 YOLOv5s와 총기용 커스텀 모델을 CPU에서 실행했습니다. 일반 모델의 결과 중 `person`, `dog`, `cat`, `bird`, `cow`, `horse`, `sheep`, `elephant`, `bear`, `zebra`, `giraffe`, `bottle`을 녹화 대상으로 선택했습니다.
+
+선택한 대상이나 `pistol`이 감지되면 마지막 검출 시각을 갱신합니다. 대상이 잠깐 사라져도 파일이 바로 끊기지 않도록 3초의 여유 시간을 두고 녹화를 종료했습니다.
+
+- [감지·녹화 코드](python/bbcamara.py)
+- [모델 구성과 경로 설정](MODEL_GUIDE.md)
+
+### Python의 감지 상태를 Java 웹에서 확인
+
+Python이 `pistol_flag.txt`에 `detected` 또는 `none`을 기록하고, `menu.jsp`가 이 파일을 5초마다 조회하도록 연결했습니다. 이 파일은 현재 감지 상태를 덮어쓰는 용도이며, 감지 이력을 누적하는 로그와는 구분됩니다.
+
+- [웹 알림 처리](src/main/webapp/menu.jsp)
+- [카메라 실행 Servlet](src/main/java/com/example/lim/CameraServlet.java)
+
+### 녹화 영상의 편집과 게시판 업로드
+
+`PotoCapcher.py`에서 날짜별 녹화 파일을 선택하고 필요한 구간이나 ROI를 저장할 수 있도록 만들었습니다. 게시글에 영상을 첨부하면 FFmpeg로 변환한 뒤 파일 경로를 게시글과 함께 DB에 저장합니다.
+
+현재 Java 요청은 Python 또는 FFmpeg 프로세스가 끝날 때까지 기다립니다. 긴 영상 처리와 웹 요청을 분리하는 작업은 다음 개선 과제로 두었습니다.
+
+- [영상 편집 코드](python/PotoCapcher.py)
+- [영상 첨부·변환 코드](src/main/java/com/example/lim/BoardWriteServlet.java)
+
+## 기술 구성
+
+| 구분 | 기술 |
+| --- | --- |
+| 영상 처리 | Python, PyTorch, YOLOv5, OpenCV, NumPy, Pillow |
+| 웹 서버 | Java, JSP/Servlet, JSTL, Tomcat |
+| 데이터 저장 | JDBC, MySQL |
+| 영상 변환 | FFmpeg |
+| 개발 도구 | Maven, IntelliJ IDEA, Labelme |
+
+Spring·MyBatis 의존성은 `pom.xml`에 포함되어 있지만, 카메라 실행과 게시판의 주요 기능은 Servlet·JDBC로 구현했습니다. Python 패키지는 [requirements.txt](python/requirements.txt)에 정리했습니다.
+
+## 실행 환경 설정
+
+Windows의 로컬 Tomcat과 Python GUI 실행을 기준으로 경로를 구성했습니다. 저장소에는 실행 환경에 맞춰 바꿔야 하는 경로와 DB 설정이 있습니다.
+
+1. Python 환경을 준비하고 `python -m pip install -r python/requirements.txt`로 패키지를 설치합니다.
+2. [MODEL_GUIDE.md](MODEL_GUIDE.md)를 따라 저장소 루트의 `best.pt`와 `bbcamara.py`의 모델 경로를 연결합니다.
+3. [DB 설정 안내](database/README.md)에 따라 `security_camera` 데이터베이스를 준비합니다.
+4. 아래 실행 경로와 파일 저장 경로를 맞춥니다.
+5. IDE에서 Maven 프로젝트와 로컬 Tomcat을 연결하고 WAR를 배포합니다.
+
+| 파일 | 설정할 내용 |
+| --- | --- |
+| `python/bbcamara.py` | 모델 경로, 녹화 폴더, Tomcat에서 읽을 플래그 파일 경로 |
+| `python/PotoCapcher.py` | 원본 영상 폴더, 편집 결과 폴더, 글꼴 경로 |
+| `CameraServlet.java`, `CameraEditServlet.java` | Python 실행 파일과 스크립트 경로 |
+| `BoardWriteServlet.java` | FFmpeg 실행 파일 경로 |
+| DB를 사용하는 Servlet·JSP | MySQL 접속 주소와 계정 |
+
+Maven의 컴파일 설정은 `source/target 1.6`으로 남아 있습니다. 프로젝트 JDK와 빌드 설정을 함께 확인한 뒤, Tomcat에 설정한 컨텍스트 경로로 접속합니다.
+
+```text
+http://localhost:8080/<컨텍스트 경로>/
 ```
 
-### 2. YOLOv5 모델 설정
+카메라를 실행한 상태에서 웹 알림을 확인하려면 메뉴 화면을 별도 탭에 열어 둡니다. 영상 저장과 플래그 파일 기록이 가능한 경로인지도 확인합니다.
 
-#### (1) 일반 객체 감지 모델
-YOLOv5s 모델은 첫 실행 시 자동으로 다운로드됩니다.
+## 개선 과제
 
-#### (2) 총기 감지 모델 (커스텀)
-학습된 모델 파일이 필요합니다:
-- 모델 파일: `best.pt` (약 51MB)
-- 저장 위치: `YOUR_USER_PATH/yolov5/runs/train/exp/weights/best.pt`
-
-**참고:** 커스텀 모델은 별도로 제공되거나 직접 학습해야 합니다.
-
-### 3. 데이터베이스 설정
-
-MySQL 데이터베이스를 생성하고 테이블을 설정하세요.
-
-#### 데이터베이스 생성
-```bash
-# MySQL 접속
-mysql -u root -p
-
-# 스키마 생성
-mysql -u root -p < database/schema.sql
-
-# 초기 데이터 입력 (선택사항)
-mysql -u root -p < database/init_data.sql
-```
-
-#### 데이터베이스 정보
-- 데이터베이스명: `security_camera`
-- 테이블: `user_infoo` (사용자), `board_post` (게시판)
-- 초기 계정: admin/admin123, testuser/test123
-
-#### Java 코드에서 DB 접속 정보 수정
-모든 Servlet 파일에서 다음 정보를 본인 환경에 맞게 수정:
-```java
-private static final String DB_URL = "jdbc:mysql://localhost:3306/security_camera?serverTimezone=UTC&useSSL=false";
-private static final String DB_USER = "YOUR_DB_USER";  // MySQL 사용자명 (예: root)
-private static final String DB_PASSWORD = "YOUR_DB_PASSWORD";  // MySQL 비밀번호
-```
-
-**상세 가이드**: `database/README.md` 참고
-
-### 4. 경로 설정
-
-다음 파일들에서 경로를 본인 환경에 맞게 수정하세요:
-
-#### Python 파일 (python/bbcamara.py)
-```python
-# 17번 줄 - 총기 감지 모델 경로
-path='YOUR_USER_PATH/yolov5/runs/train/exp/weights/best.pt'
-
-# 26번 줄 - 영상 저장 경로
-base_save_folder_annotated = r"YOUR_USER_PATH/Desktop/bb camara"
-
-# 33번 줄 - 플래그 파일 경로
-flag_file_path = r"YOUR_TOMCAT_PATH/webapps/ch33/pistol_flag.txt"
-```
-
-#### Python 파일 (python/PotoCapcher.py)
-```python
-# 96-97번 줄 - 영상 폴더 경로
-base_video_folder = r"YOUR_USER_PATH/Desktop/bb camara"
-edited_base_folder = r"YOUR_USER_PATH/Desktop/PotoCapchers"
-```
-
-#### Java 파일 (CameraServlet.java 등)
-```java
-private static final String PYTHON_EXE = "python";
-private static final String PYTHON_SCRIPT = "YOUR_USER_PATH/Desktop/python/bbcamara.py";
-```
-
-### 5. 프로젝트 빌드 및 실행
-
-#### IntelliJ IDEA 사용
-1. File → Open → 프로젝트 폴더 선택
-2. Run → Edit Configurations
-3. '+' 클릭 → Tomcat Server → Local
-4. Deployment 탭에서 Artifact 추가
-5. Run 버튼 클릭
-
-#### 수동 빌드
-```bash
-mvn clean package
-cp target/limproject.war $TOMCAT_HOME/webapps/
-```
-
-### 6. 접속
-```
-http://localhost:8080/프로젝트명/
-```
-
-## 주요 구현 사항
-
-### 객체 감지 시스템
-**선택적 클래스 감지**
-- YOLOv5 COCO 모델은 80개 클래스를 지원하지만, 실제 방범 목적에 맞게 12개만 선택
-- 선택 이유: 움직이는 물체 인식 테스트를 위해 간단한 물병이나 동물 동영상 활용
-- 감지 객체: person, dog, cat, bird, cow, horse, sheep, elephant, bear, zebra, giraffe, bottle
-
-**실시간 추론**
-- CPU 기반 추론 (PyTorch 2.6.0+cpu)
-- 프레임별 객체 감지 및 바운딩 박스 표시
-- 감지 결과 실시간 화면 출력
-
-### 총기 감지 모델 학습
-**데이터 수집 및 라벨링**
-- GitHub에서 총기 이미지 데이터 수집
-- Labelme 도구를 이용한 직접 라벨링
-- YOLOv5 형식으로 데이터셋 구성
-
-**모델 학습**
-- 베이스 모델: YOLOv5s
-- 학습 환경: CPU (GPU 미사용)
-- 커스텀 클래스: pistol
-
-### 자동 녹화 시스템
-- 객체 감지 시 자동 녹화 시작
-- 날짜별 폴더 자동 생성 (`YYYY-MM-DD`)
-- 움직임 종료 후 3초 버퍼 타임
-- OpenCV VideoWriter 사용 (MP4 형식)
-
-### 총기 감지 알림
-- 총기 감지 시 `pistol_flag.txt` 파일 갱신
-- 웹 페이지에서 5초마다 폴링 방식으로 확인
-- 감지 시 JavaScript alert 및 화면 표시
-
-### 영상 편집 시스템 (PotoCapcher)
-**기본 기능**
-- 날짜별 폴더 탐색
-- 프레임 단위 이동 (←/→: 1프레임, ↑/↓: 10프레임)
-- 시작/종료 프레임 지정 (Space 키)
-- 구간 동영상 저장
-
-**고급 기능**
-- ROI(Region of Interest) 마우스 드래그로 지정
-- ROI 영역 확대 뷰 제공 (500x500)
-- 스냅샷 저장 (전체/ROI 영역)
-- 한글 UI 지원 (Pillow + 맑은 고딕)
-
-**단축키**
-- h: 도움말 표시
-- Space: 시작/종료 프레임 지정
-- x: 스냅샷 저장
-- c: 동영상 저장
-- v: 설정 초기화
-
-## 프로젝트 구조
-
-```
-limproject/
-├── database/
-│   ├── schema.sql            # 데이터베이스 스키마
-│   ├── init_data.sql         # 초기 데이터
-│   └── README.md             # 데이터베이스 설치 가이드
-├── python/
-│   ├── bbcamara.py           # 방범 카메라 실행
-│   ├── PotoCapcher.py        # 영상 편집기
-│   └── requirements.txt      # Python 패키지 목록
-├── src/
-│   └── main/
-│       ├── java/com/example/lim/
-│       │   ├── CameraServlet.java
-│       │   ├── CameraEditServlet.java
-│       │   ├── LoginServlet.java
-│       │   ├── BoardListServlet.java
-│       │   └── ...
-│       ├── webapp/
-│       │   ├── WEB-INF/web.xml
-│       │   ├── index.jsp
-│       │   ├── menu.jsp
-│       │   ├── board.jsp
-│       │   └── ...
-│       └── resources/
-│           └── application.properties
-├── README.md
-├── MODEL_GUIDE.md
-└── pom.xml
-```
-
-## 사용 방법
-
-### 1. 방범 카메라 실행
-1. 메뉴에서 "방범 카메라" 버튼 클릭
-2. AI 모델 로딩 대기 (최초 1~2분 소요)
-3. 카메라 창 표시
-4. 객체 감지 시 자동 녹화 시작
-5. ESC 키로 종료
-
-### 2. 영상 편집
-1. "방범 카메라 편집" 버튼 클릭
-2. 날짜 폴더 선택 (a/d 키)
-3. 영상 파일 선택 (w/s 키)
-4. Space 키로 편집 모드 진입
-5. h 키로 도움말 확인
-6. 원하는 구간 지정 및 저장
-
-### 3. 총기 감지 알림
-- 게시판 페이지 접속 시 자동 활성화
-- 5초마다 자동으로 감지 상태 확인
-- 총기 감지 시 alert 팝업 표시
-
-## 개발 과정
-
-### 개발 기간
-약 7개월 (2024년 ~ 2025년)
-
-### 주요 개발 과정
-1. 프로젝트 기획 및 설계
-2. YOLOv5 모델 학습 환경 구축
-3. 총기 데이터 수집 및 라벨링
-4. 커스텀 모델 학습
-5. 웹 인터페이스 개발
-6. 실시간 감지 시스템 구현
-7. 자동 녹화 기능 구현
-8. 영상 편집기 개발
-9. 통합 테스트 및 최적화
-
-## 주의 사항
-
-### AI 모델 로딩
-- 최초 실행 시 YOLOv5 모델 다운로드로 시간 소요
-- CPU 환경에서는 추론 속도가 느릴 수 있음
-- GPU 사용 시 성능 향상 (코드 수정 필요: `device='cuda'`)
-
-### 경로 설정
-- 모든 파일 경로를 본인 환경에 맞게 수정 필수
-- 절대 경로 사용 권장
-- Python 경로 확인: `where python` (Windows)
-
-### 성능
-- CPU 사용 시 실시간 처리 지연 가능
-- 웹캠 해상도가 높을수록 처리 속도 저하
-- 메모리 사용량 모니터링 필요
-
-### 보안
-- 본 프로젝트는 포트폴리오 목적으로 제작
-- 실제 보안 시스템으로 사용 시 추가 보안 강화 필요
-- 네트워크 보안, 데이터 암호화 등 고려
+- **감지 결과 검증**: 조명·거리·가림 조건별로 오탐·미탐을 정리하고, 처리 FPS와 웹 알림 지연을 측정하려고 합니다.
+- **이벤트 전달**: 현재 상태 파일을 덮어쓰는 방식에서 짧은 감지 이벤트가 누락될 수 있어, 이벤트 저장과 전달 방식을 보완하려고 합니다.
+- **프로세스 관리**: 카메라 실행과 영상 변환을 요청 처리에서 분리하고, 중복 실행·종료·실패 상태를 관리할 계획입니다.
+- **실행 설정 정리**: PC별 경로와 DB 설정을 외부 설정으로 모아 실행 준비 과정을 줄이려고 합니다.
 
 ## 라이선스
 
 MIT License
 
-## 개발자 정보
+## 개발자
 
-- 개발자: 임재민
-- 이메일: woals3346@naver.com
-- GitHub: https://github.com/jeaminlim0000
-
-## 참고 사항
-
-본 프로젝트는 개인 포트폴리오 및 사회 안전 기여 목적으로 제작되었습니다.
-실제 공공장소 배치를 위해서는 법적 검토와 개인정보 보호 조치가 필요합니다.
+임재민 · [GitHub](https://github.com/jeaminlim0000)
